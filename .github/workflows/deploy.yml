@@ -44,7 +44,7 @@ jobs:
 
       - name: Add server's SSH key to known hosts
         run: |
-          ssh-keyscan -H your_server_ip >> ~/.ssh/known_hosts
+          ssh-keyscan -H 100.42.181.2 >> ~/.ssh/known_hosts
 
       - name: Install Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
