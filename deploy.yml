@@ -8,69 +8,8 @@
     domain_suffix: "server.awr360.help"
     sanitized_branch_name: "{{ lookup('env', 'SANITIZED_BRANCH_NAME') }}"
 
-  tasks:
-    - name: Ensure required packages are installed
-      apt:
-        name: 
-          - apt-transport-https
-          - ca-certificates
-          - curl
-          - software-properties-common
-          - python3-pip
-        state: present
-        update_cache: yes
-
-    - name: Remove existing Docker GPG key (if exists)
-      command: apt-key del docker
-      ignore_errors: yes
-
-    - name: Remove existing Docker sources list (if exists)
-      file:
-        path: /etc/apt/sources.list.d/docker.list
-        state: absent
-      ignore_errors: yes
-
-    - name: Install ca-certificates and curl
-      apt:
-        name: 
-          - ca-certificates
-          - curl
-        state: present
-
-    - name: Create keyrings directory
-      file:
-        path: /etc/apt/keyrings
-        state: directory
-        mode: '0755'
-
-    - name: Download Docker GPG key
-      get_url:
-        url: https://download.docker.com/linux/ubuntu/gpg
-        dest: /etc/apt/keyrings/docker.asc
-        mode: '0644'
-
-    - name: Add Docker repository
-      copy:
-        dest: /etc/apt/sources.list.d/docker.list
-        content: |
-          deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
-
-    - name: Update apt cache
-      apt:
-        update_cache: yes
-
-    - name: Install Docker
-      apt:
-        name: docker-ce
-        state: present
-
-    - name: Ensure Docker Compose is installed via pip
-      pip:
-        name: docker-compose
-        state: latest
-
-    - name: Ensure Docker service is running
-      service:
+    - name: Ensure Docker service is started
+      systemd:
         name: docker
         state: started
         enabled: true
@@ -117,7 +56,7 @@
             web:
 
     - name: Start Traefik
-      command: /usr/local/bin/docker-compose up -d
+      command: /usr/local/bin/docker compose up -d
       args:
         chdir: /opt/traefik
 
@@ -126,16 +65,20 @@
         echo "{{ ghcr_password }}" | docker login ghcr.io -u {{ ghcr_username }} --password-stdin
       ignore_errors: yes
 
+    - name: Extract branch name
+      set_fact:
+        branch_name: "{{ lookup('env', 'SANITIZED_BRANCH_NAME') }}"
+
     - name: Run Docker container
       shell: |
         INTERNAL_PORT=$((3000 + RANDOM % 1000))
         docker run -d \
-          --name admin-{{ sanitized_branch_name }} \
+          --name admin-{{ branch_name }} \
           --label "traefik.enable=true" \
-          --label "traefik.http.routers.{{ sanitized_branch_name }}.rule=Host(`{{ sanitized_branch_name }}.{{ domain_suffix }}`)" \
-          --label "traefik.http.services.{{ sanitized_branch_name }}.loadbalancer.server.port=3000" \
+          --label "traefik.http.routers.{{ branch_name }}.rule=Host(`{{ branch_name }}.{{ domain_suffix }}`)" \
+          --label "traefik.http.services.{{ branch_name }}.loadbalancer.server.port=3000" \
           --network web \
           -p $INTERNAL_PORT:3000 \
-          ghcr.io/{{ ghcr_username }}/admin:{{ sanitized_branch_name }}
+          ghcr.io/{{ ghcr_username }}/admin:{{ branch_name }}
       environment:
-        SANITIZED_BRANCH_NAME: "{{ sanitized_branch_name }}"
+        SANITIZED_BRANCH_NAME: "{{ branch_name }}"
