@@ -10,19 +10,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
-          
+
       - name: Extract branch name
         id: extract_branch
         run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-        
+
       - name: Sanitize and convert branch name to lowercase
         id: sanitize_branch
         run: |
@@ -37,10 +38,17 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/admin:${{ env.SANITIZED_BRANCH_NAME }}
 
-      - name: Deploy using Ansible
-        uses: actions/checkout@v4
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.5.3
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add known hosts
+        run: echo "${{ secrets.SSH_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+
       - name: Install Ansible
         run: sudo apt-get update && sudo apt-get install -y ansible
+
       - name: Run Ansible Playbook
         run: ansible-playbook -i hosts.ini deploy.yml
         env:
