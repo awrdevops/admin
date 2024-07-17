@@ -23,10 +23,10 @@ jobs:
         id: extract_branch
         run: echo "BRANCH_NAME=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
         
-      - name: Sanitize branch name
+      - name: Sanitize and convert branch name to lowercase
         id: sanitize_branch
         run: |
-          SANITIZED_BRANCH_NAME=$(echo $BRANCH_NAME | sed 's/[^a-zA-Z0-9_-]/-/g')
+          SANITIZED_BRANCH_NAME=$(echo $BRANCH_NAME | sed 's/[^a-zA-Z0-9_-]/-/g' | tr '[:upper:]' '[:lower:]')
           echo "SANITIZED_BRANCH_NAME=$SANITIZED_BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Build and push Docker image
@@ -35,4 +35,4 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/awr-connect-admin:${{ env.SANITIZED_BRANCH_NAME }}
+            ghcr.io/${{ github.repository_owner }}/admin:${{ env.SANITIZED_BRANCH_NAME }}
