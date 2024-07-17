@@ -15,10 +15,9 @@
 
     - name: Install Docker Compose
       get_url:
-        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-`uname -s`-`uname -m`
+        url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
         dest: /usr/local/bin/docker-compose
         mode: '0755'
-      become: true
 
     - name: Ensure Docker service is started
       systemd:
@@ -68,7 +67,7 @@
             web:
 
     - name: Start Traefik
-      command: docker-compose up -d
+      command: /usr/local/bin/docker-compose up -d
       args:
         chdir: /opt/traefik
 
@@ -92,3 +91,5 @@
           --network web \
           -p $INTERNAL_PORT:3000 \
           ghcr.io/{{ ghcr_username }}/admin:{{ branch_name }}
+      environment:
+        SANITIZED_BRANCH_NAME: "{{ branch_name }}"
