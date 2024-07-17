@@ -35,4 +35,4 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/admin:${{ env.SANITIZED_BRANCH_NAME }}
+            ghcr.io/awr360/admin:${{ env.SANITIZED_BRANCH_NAME }}
