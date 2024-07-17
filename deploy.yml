@@ -13,6 +13,12 @@
         dest: /usr/local/bin/docker-compose
         mode: '0755'
 
+    - name: Ensure Docker service is started
+      systemd:
+        name: docker
+        state: started
+        enabled: true
+
     - name: Create a directory for Traefik
       file:
         path: /opt/traefik
@@ -74,10 +80,10 @@
         docker run -d \
           --name admin-{{ branch_name }} \
           --label "traefik.enable=true" \
-          --label "traefik.http.routers.{{ branch_name }}.rule=Host(`{{ branch_name }}.{{ domain_suffix }}`)" \
+          --label "traefik.http.routers.{{ branch_name }}.rule=Host(\"{{ branch_name }}.{{ domain_suffix }}\")" \
           --label "traefik.http.services.{{ branch_name }}.loadbalancer.server.port=3000" \
           --network web \
           -p $INTERNAL_PORT:3000 \
-          ghcr.io/{{ ghcr_username }}/admin:{{ branch_name }}
+          ghcr.io/{{ ghcr_username | lower }}/admin:{{ branch_name }}
       environment:
         SANITIZED_BRANCH_NAME: "{{ branch_name }}"
