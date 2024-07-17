@@ -1,3 +1,4 @@
+---
 - name: Deploy Next.js Application
   hosts: servers
   become: true
@@ -5,19 +6,17 @@
     ghcr_username: "m4nojTudu"
     ghcr_password: "{{ lookup('env', 'GHCR_PAT') }}"
     domain_suffix: "server.awr360.help"
-
-- name: Ensure Docker and Docker Compose are installed
-  hosts: all
-  become: true
+    sanitized_branch_name: "{{ lookup('env', 'SANITIZED_BRANCH_NAME') }}"
 
   tasks:
-    - name: Install required packages
+    - name: Ensure Docker and Docker Compose are installed
       apt:
         name: 
           - apt-transport-https
           - ca-certificates
           - curl
           - software-properties-common
+          - python3-pip
         state: present
         update_cache: yes
 
@@ -38,11 +37,6 @@
     - name: Install Docker
       apt:
         name: docker-ce
-        state: present
-
-    - name: Install pip for managing Python packages
-      apt:
-        name: python3-pip
         state: present
 
     - name: Ensure Docker Compose is installed via pip
@@ -107,20 +101,16 @@
         echo "{{ ghcr_password }}" | docker login ghcr.io -u {{ ghcr_username }} --password-stdin
       ignore_errors: yes
 
-    - name: Extract branch name
-      set_fact:
-        branch_name: "{{ lookup('env', 'SANITIZED_BRANCH_NAME') }}"
-
     - name: Run Docker container
       shell: |
         INTERNAL_PORT=$((3000 + RANDOM % 1000))
         docker run -d \
-          --name admin-{{ branch_name }} \
+          --name admin-{{ sanitized_branch_name }} \
           --label "traefik.enable=true" \
-          --label "traefik.http.routers.{{ branch_name }}.rule=Host(`{{ branch_name }}.{{ domain_suffix }}`)" \
-          --label "traefik.http.services.{{ branch_name }}.loadbalancer.server.port=3000" \
+          --label "traefik.http.routers.{{ sanitized_branch_name }}.rule=Host(`{{ sanitized_branch_name }}.{{ domain_suffix }}`)" \
+          --label "traefik.http.services.{{ sanitized_branch_name }}.loadbalancer.server.port=3000" \
           --network web \
           -p $INTERNAL_PORT:3000 \
-          ghcr.io/{{ ghcr_username }}/admin:{{ branch_name }}
+          ghcr.io/{{ ghcr_username }}/admin:{{ sanitized_branch_name }}
       environment:
-        SANITIZED_BRANCH_NAME: "{{ branch_name }}"
+        SANITIZED_BRANCH_NAME: "{{ sanitized_branch_name }}"
